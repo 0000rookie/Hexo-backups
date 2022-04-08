@@ -1,0 +1,57 @@
+version: 1.0.{build}
+build:
+  verbosity: minimal
+  
+clone_depth: 5
+environment:
+access_token:
+    secure: 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
+install:
+    - node --version
+    - npm --version
+    - npm install
+    - npm install hexo-cli -g
+    - npm install hexo-abbrlink --save
+    - npm install hexo-admin --save
+    - npm install hexo-algoliasearch --save
+    - npm install hexo-asset-image --save
+    - npm install hexo-auto-category --save
+    - npm install hexo-autoprefixer --save --save
+    - npm install hexo-blog-encrypt --save
+    - npm install hexo-deployer-git --save
+    - npm install hexo-feed --save
+    - npm install hexo-generator-archive --save
+    - npm install hexo-generator-baidu-sitemap --save
+    - npm install hexo-generator-category --save
+    - npm install hexo-generator-index --save
+    - npm install hexo-generator-searchdb --save
+    - npm install hexo-generator-sitemap --save
+    - npm install hexo-generator-tag --save
+    - npm install hexo-helper-live2d --save
+    - npm install hexo-permalink-pinyin --save
+    - npm install hexo-renderer-ejs --save
+    - npm install hexo-renderer-multi-markdown-it --save
+    - npm install hexo-renderer-stylus --save
+    - npm install hexo-seo-autopush@ --save
+    - npm install hexo-server --save
+    - npm install hexo-symbols-count-time --save
+    - npm install hexo-theme-landscape --save
+    - npm install hexo-wordcount@ --save
+    - npm install live2d-widget-model-haruto --save
+
+build_script:
+    - hexo generate
+artifacts:
+    - path: public
+on_success:
+    - git config --global credential.helper store
+    - ps: Add-Content "$env:USERPROFILE\.git-credentials" "https://$($env:access_token):x-oauth-basic@github.com`n"
+    - git config --global user.email "%GIT_USER_EMAIL%"
+    - git config --global user.name "%GIT_USER_NAME%"
+    - git clone --depth 5 -q --branch=%TARGET_BRANCH% %STATIC_SITE_REPO% %TEMP%\static-site
+    - cd %TEMP%\static-site
+    - del * /f /q
+    - for /d %%p IN (*) do rmdir "%%p" /s /q
+    - SETLOCAL EnableDelayedExpansion & robocopy "%APPVEYOR_BUILD_FOLDER%\public" "%TEMP%\static-site" /e & IF !ERRORLEVEL! EQU 1 (exit 0) ELSE (IF !ERRORLEVEL! EQU 3 (exit 0) ELSE (exit 1))
+    - git add -A
+    - if "%APPVEYOR_REPO_BRANCH%"=="master" if not defined APPVEYOR_PULL_REQUEST_NUMBER (git diff --quiet --exit-code --cached || git commit -m "Update Static Site" && git push origin %TARGET_BRANCH% && appveyor AddMessage "Static Site Updated")
